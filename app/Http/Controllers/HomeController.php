@@ -17,8 +17,9 @@ class HomeController extends Controller
         // Get authenticated user data and role
         $penggunaId = session('pengguna_id');
 
+        // If not authenticated, show public landing page
         if (!$penggunaId) {
-            return redirect()->route('login');
+            return $this->landingPage();
         }
 
         $user = DB::table('pengguna')
@@ -39,6 +40,70 @@ class HomeController extends Controller
         } else {
             return $this->adminDashboard($user);
         }
+    }
+
+    /**
+     * Public Landing Page for guests
+     */
+    private function landingPage(): Response
+    {
+        // Get public statistics
+        $stats = [
+            'selesai' => DB::table('aduan')
+                ->join('status_aduan', 'aduan.status_aduan_id', '=', 'status_aduan.id')
+                ->where('status_aduan.nama_status', 'Selesai')
+                ->count(),
+            'proses' => DB::table('aduan')
+                ->join('status_aduan', 'aduan.status_aduan_id', '=', 'status_aduan.id')
+                ->where('status_aduan.nama_status', 'Diproses')
+                ->count(),
+            'verifikasi' => DB::table('aduan')
+                ->join('status_aduan', 'aduan.status_aduan_id', '=', 'status_aduan.id')
+                ->where('status_aduan.nama_status', 'Diverifikasi')
+                ->count(),
+            'diajukan' => DB::table('aduan')
+                ->join('status_aduan', 'aduan.status_aduan_id', '=', 'status_aduan.id')
+                ->where('status_aduan.nama_status', 'Diajukan')
+                ->count(),
+        ];
+
+        // Get recent public complaints (completed ones)
+        $publicReports = DB::table('aduan')
+            ->join('status_aduan', 'aduan.status_aduan_id', '=', 'status_aduan.id')
+            ->join('kategori_aduan', 'aduan.kategori_aduan_id', '=', 'kategori_aduan.id')
+            ->whereIn('status_aduan.nama_status', ['Selesai', 'Diproses'])
+            ->select(
+                'aduan.id',
+                DB::raw('LEFT(aduan.isi_aduan, 100) as title'),
+                'aduan.lokasi as location',
+                'status_aduan.nama_status as status',
+                'aduan.foto as image'
+            )
+            ->orderBy('aduan.tanggal_dibuat', 'desc')
+            ->limit(8)
+            ->get();
+
+        // Hero images from Unsplash
+        $heroImages = [
+            [
+                'url' => 'https://images.unsplash.com/photo-1577495508048-b635879837f1?w=1200&h=600&fit=crop',
+                'alt' => 'Pemkab Pemalang'
+            ],
+            [
+                'url' => 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&h=600&fit=crop',
+                'alt' => 'Layanan Masyarakat'
+            ],
+            [
+                'url' => 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=1200&h=600&fit=crop',
+                'alt' => 'E-Lapor Online'
+            ],
+        ];
+
+        return Inertia::render('Landing', [
+            'stats' => $stats,
+            'publicReports' => $publicReports,
+            'heroImages' => $heroImages,
+        ]);
     }
 
     /**
