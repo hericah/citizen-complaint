@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class AduanController extends Controller
@@ -75,9 +76,6 @@ class AduanController extends Controller
                 ])->withInput();
             }
 
-            // Upload foto
-            $fotoPath = $request->file('foto')->store('aduan', 'public');
-
             // Generate no_aduan (format: ADU-YYYYMMDD-XXXX)
             $today = now()->format('Ymd');
             $latestAduan = DB::table('aduan')
@@ -93,6 +91,18 @@ class AduanController extends Controller
             }
 
             $noAduan = "ADU-{$today}-" . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+
+            // Upload foto to public/upload_aduan/{no_aduan}/ so it can be served directly
+            $file = $request->file('foto');
+            $destinationDir = public_path('upload_aduan/' . $noAduan);
+
+            if (!File::exists($destinationDir)) {
+                File::makeDirectory($destinationDir, 0755, true);
+            }
+
+            $filename = $noAduan . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $file->move($destinationDir, $filename);
+            $fotoPath = 'upload_aduan/' . $noAduan . '/' . $filename;
 
             // Insert into aduan table
             DB::table('aduan')->insert([
@@ -119,13 +129,13 @@ class AduanController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            // If upload fails, delete the uploaded file
-            if (isset($fotoPath)) {
-                Storage::disk('public')->delete($fotoPath);
+            // If upload fails, delete the uploaded file (from public folder)
+            if (isset($fotoPath) && File::exists(public_path($fotoPath))) {
+                File::delete(public_path($fotoPath));
             }
 
             // Log error for debugging
-            \Log::error('Error creating aduan: ' . $e->getMessage());
+            Log::error('Error creating aduan: ' . $e->getMessage());
 
             return back()->withErrors([
                 'error' => 'Terjadi kesalahan saat menyimpan aduan. Silakan coba lagi.'

@@ -177,6 +177,7 @@
 import { ref, computed } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import CitizenLayout from '@/Layouts/CitizenLayout.vue';
+import Swal from 'sweetalert2';
 
 // Props from backend
 const props = defineProps({
@@ -223,7 +224,12 @@ const handleFileChange = (e) => {
   if (file) {
     // Validate file size (2MB)
     if (file.size > 2 * 1024 * 1024) {
-      alert('Ukuran file maksimal 2MB');
+      Swal.fire({
+        icon: 'warning',
+        title: 'File Terlalu Besar',
+        text: 'Ukuran file maksimal 2MB',
+        confirmButtonColor: '#3B82F6',
+      })
       e.target.value = '';
       return;
     }
@@ -279,7 +285,12 @@ const reverseGeocode = async (lat, lon) => {
 // Detect location using geolocation API
 const detectLocation = () => {
   if (!navigator.geolocation) {
-    alert('Geolocation tidak didukung oleh browser Anda');
+    Swal.fire({
+      icon: 'error',
+      title: 'Geolocation Tidak Didukung',
+      text: 'Browser Anda tidak mendukung fitur lokasi',
+      confirmButtonColor: '#3B82F6',
+    })
     return;
   }
 
@@ -314,7 +325,12 @@ const detectLocation = () => {
           break;
       }
       
-      alert(errorMessage);
+      Swal.fire({
+        icon: 'error',
+        title: 'Geolocation Error',
+        text: errorMessage,
+        confirmButtonColor: '#3B82F6',
+      })
     },
     {
       enableHighAccuracy: true,

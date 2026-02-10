@@ -1,6 +1,9 @@
 <script setup>
-import { Head } from '@inertiajs/vue3'
-import StaffLayout from '@/Layouts/StaffLayout.vue'
+import { Head } from "@inertiajs/vue3";
+import { router } from "@inertiajs/vue3";
+import OpdLayout from "@/Layouts/OpdLayout.vue";
+import Swal from "sweetalert2";
+import { ref } from "vue";
 
 defineProps({
   user: Object,
@@ -10,41 +13,145 @@ defineProps({
       totalAduan: 0,
       diajukan: 0,
       diproses: 0,
-      selesai: 0
-    })
+      selesai: 0,
+    }),
   },
   assignedComplaints: {
     type: Array,
-    default: () => []
-  }
-})
+    default: () => [],
+  },
+});
 
 const getStatusColor = (status) => {
   const colors = {
-    'Diajukan': 'bg-yellow-100 text-yellow-800',
-    'Diverifikasi': 'bg-blue-100 text-blue-800',
-    'Diproses': 'bg-purple-100 text-purple-800',
-    'Selesai': 'bg-green-100 text-green-800',
-    'Ditolak': 'bg-red-100 text-red-800'
+    Diajukan: "bg-yellow-100 text-yellow-800",
+    Diverifikasi: "bg-blue-100 text-blue-800",
+    Diproses: "bg-purple-100 text-purple-800",
+    Selesai: "bg-green-100 text-green-800",
+    Ditolak: "bg-red-100 text-red-800",
+  };
+  return colors[status] || "bg-gray-100 text-gray-800";
+};
+
+const wizard = (aduanId) => {
+  router.get(`/opd/wizard/${aduanId}`);
+};
+
+const changeStatus = async (aduanId) => {
+  const result = await Swal.fire({
+    icon: "question",
+    title: "Ubah Status Aduan",
+    html: `
+      <div style="text-align: left;">
+        <label style="display: block; margin: 10px 0; font-weight: bold;">Pilih Status Baru:</label>
+        <select id="statusSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+          <option value="">-- Pilih Status --</option>
+          <option value="1">Diajukan</option>
+          <option value="2">Diverifikasi</option>
+          <option value="3">Diproses</option>
+          <option value="4">Selesai</option>
+          <option value="5">Ditolak</option>
+        </select>
+        <textarea id="keteranganInput" placeholder="Keterangan (opsional)" style="width: 100%; padding: 8px; margin-top: 10px; border: 1px solid #ddd; border-radius: 4px; min-height: 80px; font-family: Arial;"></textarea>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: "Simpan",
+    cancelButtonText: "Batal",
+    confirmButtonColor: "#3B82F6",
+    preConfirm: () => {
+      const status = document.getElementById("statusSelect").value;
+      const keterangan = document.getElementById("keteranganInput").value;
+      if (!status) {
+        Swal.showValidationMessage("Pilih status terlebih dahulu!");
+        return false;
+      }
+      return { status, keterangan };
+    }
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    await router.put(`/manajemenaduan/daftaraduan/${aduanId}/status`, {
+      status_aduan_id: result.value.status,
+      keterangan: result.value.keterangan || "Status diubah oleh OPD",
+    });
+
+    Swal.fire({
+      icon: "success",
+      title: "Berhasil!",
+      text: "Status aduan berhasil diubah.",
+      confirmButtonColor: "#3B82F6",
+    });
+  } catch (error) {
+    Swal.fire({
+      icon: "error",
+      title: "Gagal!",
+      text: "Terjadi kesalahan saat mengubah status aduan.",
+      confirmButtonColor: "#3B82F6",
+    });
   }
-  return colors[status] || 'bg-gray-100 text-gray-800'
-}
+};
+
+const finishComplaint = async (aduanId) => {
+  const result = await Swal.fire({
+    icon: "question",
+    title: "Tandai Selesai",
+    text: "Apakah Anda yakin mengubah status aduan menjadi Selesai?",
+    showCancelButton: true,
+    confirmButtonText: "Ya, Selesai",
+    cancelButtonText: "Batal",
+    confirmButtonColor: "#10B981",
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    await router.put(`/manajemenaduan/daftaraduan/${aduanId}/status`, {
+      status_aduan_id: 4,
+      keterangan: "Selesai oleh OPD",
+    });
+
+    Swal.fire({
+      icon: "success",
+      title: "Berhasil!",
+      text: "Status aduan berhasil diubah menjadi Selesai.",
+      confirmButtonColor: "#3B82F6",
+    });
+  } catch (error) {
+    Swal.fire({
+      icon: "error",
+      title: "Gagal!",
+      text: "Terjadi kesalahan saat mengubah status aduan.",
+      confirmButtonColor: "#3B82F6",
+    });
+  }
+};
+
+const viewLaporan = (aduanId) => {
+  router.get(`/laporan-pengaduan?aduan=${aduanId}`);
+};
 </script>
 
 <template>
   <Head title="Dashboard OPD" />
 
-  <StaffLayout :user="user">
+  <OpdLayout :user="user">
     <!-- Page Header -->
     <div class="mb-8">
       <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Dashboard OPD</h2>
-      <p class="text-sm text-gray-500 mt-1">Kelola pengaduan yang ditugaskan ke OPD Anda</p>
+      <p class="text-sm text-gray-500 mt-1">
+        Kelola pengaduan yang ditugaskan ke OPD Anda
+      </p>
     </div>
 
     <!-- Statistics Cards Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
       <!-- Card 1: Total Assigned -->
-      <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
+      <div
+        class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white"
+      >
         <div class="flex items-center justify-between">
           <div>
             <p class="text-blue-100 text-sm font-medium">Total Ditugaskan</p>
@@ -52,14 +159,21 @@ const getStatusColor = (status) => {
           </div>
           <div class="bg-white bg-opacity-20 p-3 rounded-lg">
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
             </svg>
           </div>
         </div>
       </div>
 
       <!-- Card 2: Diajukan -->
-      <div class="bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl shadow-lg p-6 text-white">
+      <div
+        class="bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl shadow-lg p-6 text-white"
+      >
         <div class="flex items-center justify-between">
           <div>
             <p class="text-yellow-100 text-sm font-medium">Diajukan</p>
@@ -67,14 +181,21 @@ const getStatusColor = (status) => {
           </div>
           <div class="bg-white bg-opacity-20 p-3 rounded-lg">
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           </div>
         </div>
       </div>
 
       <!-- Card 3: Diproses -->
-      <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+      <div
+        class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white"
+      >
         <div class="flex items-center justify-between">
           <div>
             <p class="text-purple-100 text-sm font-medium">Sedang Diproses</p>
@@ -82,14 +203,21 @@ const getStatusColor = (status) => {
           </div>
           <div class="bg-white bg-opacity-20 p-3 rounded-lg">
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
             </svg>
           </div>
         </div>
       </div>
 
       <!-- Card 4: Selesai -->
-      <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
+      <div
+        class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white"
+      >
         <div class="flex items-center justify-between">
           <div>
             <p class="text-green-100 text-sm font-medium">Selesai</p>
@@ -97,7 +225,12 @@ const getStatusColor = (status) => {
           </div>
           <div class="bg-white bg-opacity-20 p-3 rounded-lg">
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           </div>
         </div>
@@ -108,7 +241,9 @@ const getStatusColor = (status) => {
     <div class="bg-white rounded-xl shadow-lg overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-200">
         <h3 class="text-lg font-bold text-gray-800">Pengaduan Ditugaskan</h3>
-        <p class="text-sm text-gray-500 mt-1">Daftar pengaduan yang perlu ditindaklanjuti</p>
+        <p class="text-sm text-gray-500 mt-1">
+          Daftar pengaduan yang perlu ditindaklanjuti
+        </p>
       </div>
 
       <!-- Table Wrapper with Horizontal Scroll -->
@@ -116,16 +251,44 @@ const getStatusColor = (status) => {
         <table class="min-w-[900px] w-full">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Judul Aduan</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pelapor</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                ID
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Judul Aduan
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Pelapor
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Status
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Tanggal
+              </th>
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Aksi
+              </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="complaint in assignedComplaints" :key="complaint.id" class="hover:bg-gray-50 transition">
+            <tr
+              v-for="complaint in assignedComplaints"
+              :key="complaint.id"
+              class="hover:bg-gray-50 transition"
+            >
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                 #{{ complaint.id }}
               </td>
@@ -136,7 +299,10 @@ const getStatusColor = (status) => {
                 {{ complaint.pelapor }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <span :class="getStatusColor(complaint.status)" class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full">
+                <span
+                  :class="getStatusColor(complaint.status)"
+                  class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
+                >
                   {{ complaint.status }}
                 </span>
               </td>
@@ -144,11 +310,29 @@ const getStatusColor = (status) => {
                 {{ complaint.tanggal }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                <button class="text-blue-600 hover:text-blue-800 font-medium transition">
+                <button
+                  @click="wizard(complaint.id)"
+                  class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded transition"
+                >
                   Proses
                 </button>
-                <button class="text-green-600 hover:text-green-800 font-medium transition">
+                <button
+                  @click="changeStatus(complaint.id)"
+                  class="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white text-xs font-medium rounded transition"
+                >
+                  Rubah Status
+                </button>
+                <button
+                  @click="finishComplaint(complaint.id)"
+                  class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded transition"
+                >
                   Selesaikan
+                </button>
+                <button
+                  @click="viewLaporan(complaint.id)"
+                  class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded transition"
+                >
+                  Cetak Laporan
                 </button>
               </td>
             </tr>
@@ -156,5 +340,5 @@ const getStatusColor = (status) => {
         </table>
       </div>
     </div>
-  </StaffLayout>
+  </OpdLayout>
 </template>

@@ -132,6 +132,25 @@
           </Link>
         </p>
       </div>
+
+      <!-- Or register with Google -->
+      <div class="pt-4">
+        <div class="flex items-center gap-3">
+          <div class="flex-1 h-px bg-gray-200"></div>
+          <div class="text-xs text-gray-400 uppercase">atau</div>
+          <div class="flex-1 h-px bg-gray-200"></div>
+        </div>
+        <a href="/auth/google/redirect"
+           class="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-3 border rounded-full text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+          <svg class="w-5 h-5" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.38 1.52 8.28 2.78l6.06-6.06C35.84 3 30.34 1 24 1 14.73 1 6.86 6.92 3.47 14.96l7.6 5.89C12.95 16.2 18.98 9.5 24 9.5z"/>
+            <path fill="#34A853" d="M46.5 24c0-1.62-.14-3.19-.4-4.71H24v9.06h12.8c-.55 2.98-2.23 5.49-4.76 7.2l7.28 5.62C43.97 36.3 46.5 30.43 46.5 24z"/>
+            <path fill="#4A90E2" d="M10.75 29.85A14.93 14.93 0 0112 24c0-1.9-.34-3.72-.95-5.35L3.47 14.96C5.68 19.86 8.81 24.03 12.9 27.2l-2.15 2.65z"/>
+            <path fill="#FBBC05" d="M24 46c6.44 0 11.94-2.1 15.84-5.7l-7.28-5.62C29.9 34.54 27.78 35.5 24 35.5c-5 0-10.03-6.7-12.93-10.39l-7.6 5.89C6.86 41.08 14.73 46 24 46z"/>
+          </svg>
+          Daftar dengan Google
+        </a>
+      </div>
     </div>
   </div>
 </template>
