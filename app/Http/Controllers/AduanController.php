@@ -75,8 +75,8 @@ class AduanController extends Controller
                 ])->withInput();
             }
 
-            // Upload foto
-            $fotoPath = $request->file('foto')->store('aduan', 'public');
+            // Upload foto to S3/MinIO
+            $fotoPath = $request->file('foto')->store('aduan');
 
             // Generate no_aduan (format: ADU-YYYYMMDD-XXXX)
             $today = now()->format('Ymd');
@@ -121,7 +121,7 @@ class AduanController extends Controller
 
             // If upload fails, delete the uploaded file
             if (isset($fotoPath)) {
-                Storage::disk('public')->delete($fotoPath);
+                Storage::delete($fotoPath);
             }
 
             // Log error for debugging

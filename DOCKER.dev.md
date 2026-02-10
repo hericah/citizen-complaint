@@ -4,13 +4,13 @@
 
 ```bash
 # 1. Start all services
-docker-compose up -d
+docker-compose -f docker-compose.dev.yml up -d
 
 # 2. Wait for services to be ready (30 seconds)
 sleep 30
 
 # 3. Run initial setup
-docker-compose exec app sh docker/scripts/setup.sh
+docker-compose -f docker-compose.dev.yml exec app sh docker/scripts/setup.sh
 
 # 4. Access application
 open http://localhost:8000
