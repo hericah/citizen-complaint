@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 
 const props = defineProps({
@@ -24,6 +24,21 @@ const props = defineProps({
 
 // Mobile menu state
 const mobileMenuOpen = ref(false)
+
+// Public reports pagination
+const visibleReportsCount = ref(4)
+
+const loadMore = () => {
+  visibleReportsCount.value += 4
+}
+
+const visibleReports = computed(() => {
+  return props.publicReports.slice(0, visibleReportsCount.value)
+})
+
+const hasMore = computed(() => {
+  return visibleReportsCount.value < props.publicReports.length
+})
 
 // Carousel state
 const currentSlide = ref(0)
@@ -151,29 +166,29 @@ onUnmounted(() => {
       <!-- Statistics Section -->
       <section>
         <h2 class="text-lg font-bold text-gray-900 mb-3">Statistik Tindakan</h2>
-        <div class="space-y-2">
+        <div class="space-y-2 md:space-y-0 md:grid md:grid-cols-4 md:gap-4">
           <!-- Selesai -->
-          <div class="bg-gradient-to-r from-green-400 to-green-500 rounded-lg px-4 py-3 text-white shadow-md flex items-center justify-between">
-            <div class="text-2xl font-bold">{{ stats.selesai }}</div>
-            <div class="text-sm font-medium text-right">Selesai</div>
+          <div class="bg-gradient-to-r from-green-400 to-green-500 rounded-lg px-4 py-3 text-white shadow-md flex items-center justify-between md:flex-col md:items-start md:justify-center md:h-24">
+            <div class="text-2xl font-bold md:text-3xl">{{ stats.selesai }}</div>
+            <div class="text-sm font-medium text-right md:text-left md:mt-1">Selesai</div>
           </div>
 
           <!-- Proses -->
-          <div class="bg-gradient-to-r from-blue-400 to-blue-500 rounded-lg px-4 py-3 text-white shadow-md flex items-center justify-between">
-            <div class="text-2xl font-bold">{{ stats.proses }}</div>
-            <div class="text-sm font-medium text-right">Proses</div>
+          <div class="bg-gradient-to-r from-blue-400 to-blue-500 rounded-lg px-4 py-3 text-white shadow-md flex items-center justify-between md:flex-col md:items-start md:justify-center md:h-24">
+            <div class="text-2xl font-bold md:text-3xl">{{ stats.proses }}</div>
+            <div class="text-sm font-medium text-right md:text-left md:mt-1">Proses</div>
           </div>
 
           <!-- Verifikasi -->
-          <div class="bg-gradient-to-r from-pink-400 to-pink-500 rounded-lg px-4 py-3 text-white shadow-md flex items-center justify-between">
-            <div class="text-2xl font-bold">{{ stats.verifikasi }}</div>
-            <div class="text-sm font-medium text-right">Verifikasi</div>
+          <div class="bg-gradient-to-r from-pink-400 to-pink-500 rounded-lg px-4 py-3 text-white shadow-md flex items-center justify-between md:flex-col md:items-start md:justify-center md:h-24">
+            <div class="text-2xl font-bold md:text-3xl">{{ stats.verifikasi }}</div>
+            <div class="text-sm font-medium text-right md:text-left md:mt-1">Verifikasi</div>
           </div>
 
           <!-- Diajukan -->
-          <div class="bg-gradient-to-r from-orange-400 to-orange-500 rounded-lg px-4 py-3 text-white shadow-md flex items-center justify-between">
-            <div class="text-2xl font-bold">{{ stats.diajukan }}</div>
-            <div class="text-sm font-medium text-right">Diajukan</div>
+          <div class="bg-gradient-to-r from-orange-400 to-orange-500 rounded-lg px-4 py-3 text-white shadow-md flex items-center justify-between md:flex-col md:items-start md:justify-center md:h-24">
+            <div class="text-2xl font-bold md:text-3xl">{{ stats.diajukan }}</div>
+            <div class="text-sm font-medium text-right md:text-left md:mt-1">Diajukan</div>
           </div>
         </div>
       </section>
@@ -182,9 +197,10 @@ onUnmounted(() => {
       <section id="laporan-publik">
         <h2 class="text-xl font-bold text-gray-900 mb-4">Laporan Publik</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          <div 
-            v-for="report in publicReports" 
+          <Link 
+            v-for="report in visibleReports" 
             :key="report.id"
+            :href="`/aduan/${report.id}`"
             class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
           >
             <!-- Report Image -->
@@ -235,7 +251,17 @@ onUnmounted(() => {
                 <span>{{ report.views || 0 }} vote</span>
               </div>
             </div>
-          </div>
+          </Link>
+        </div>
+
+        <!-- Load More Button -->
+        <div v-if="hasMore" class="flex justify-center mt-6">
+          <button 
+            @click="loadMore"
+            class="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-medium shadow-md transition-all transform hover:scale-105"
+          >
+            Muat Lebih Banyak
+          </button>
         </div>
 
         <!-- Empty State -->
@@ -248,8 +274,8 @@ onUnmounted(() => {
       </section>
     </main>
 
-    <!-- Floating Action Button - Lapor Online -->
-    <div class="fixed bottom-6 left-0 right-0 flex justify-center z-40 pointer-events-none">
+    <!-- Floating Action Button - Lapor Online (Mobile Only) -->
+    <div class="md:hidden fixed bottom-6 left-0 right-0 flex justify-center z-50 pointer-events-none">
       <Link 
         href="/aduan/create"
         class="pointer-events-auto bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-full shadow-2xl flex items-center space-x-3 transition-all transform hover:scale-105 font-semibold text-lg"

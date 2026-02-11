@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -67,21 +68,40 @@ class HomeController extends Controller
                 ->count(),
         ];
 
-        // Get recent public complaints (completed ones)
+        // Get recent public complaints (all except rejected)
         $publicReports = DB::table('aduan')
             ->join('status_aduan', 'aduan.status_aduan_id', '=', 'status_aduan.id')
             ->join('kategori_aduan', 'aduan.kategori_aduan_id', '=', 'kategori_aduan.id')
-            ->whereIn('status_aduan.nama_status', ['Selesai', 'Diproses'])
+            ->join('akses_aduan', 'aduan.akses_aduan_id', '=', 'akses_aduan.id')
+            ->where('akses_aduan.nama_akses_aduan', 'Publik')
+            ->where('status_aduan.nama_status', '!=', 'Ditolak')
             ->select(
                 'aduan.id',
                 DB::raw('LEFT(aduan.isi_aduan, 100) as title'),
                 'aduan.lokasi as location',
                 'status_aduan.nama_status as status',
-                'aduan.foto as image'
+                'aduan.foto'
             )
             ->orderBy('aduan.tanggal_dibuat', 'desc')
-            ->limit(8)
-            ->get();
+            ->limit(20)
+            ->get()
+            ->map(function ($report) {
+                // Convert foto path to full URL
+                if ($report->foto) {
+                    // Check if using S3 or local storage
+                    $disk = config('filesystems.default');
+                    if ($disk === 's3') {
+                        $report->image = Storage::url($report->foto);
+                    } else {
+                        // For public disk, use asset URL
+                        $report->image = asset('storage/' . $report->foto);
+                    }
+                } else {
+                    $report->image = null;
+                }
+                unset($report->foto);
+                return $report;
+            });
 
         // Hero images from Unsplash
         $heroImages = [

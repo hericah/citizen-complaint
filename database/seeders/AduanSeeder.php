@@ -150,13 +150,16 @@ class AduanSeeder extends Seeder
                 'tanggal_diubah' => now()->subDays(rand(0, 5)),
             ]);
 
+            // Get pengguna_id for status history
+            $penggunaId = DB::table('masyarakat')->where('id', $masyarakatId)->value('pengguna_id');
+
             // Add status history
             DB::table('riwayat_status_aduan')->insert([
                 'aduan_id' => $aduanId,
                 'status_aduan_id' => $statusId,
                 'waktu_status_aduan' => now()->subDays(rand(0, 5)),
                 'catatan' => 'Status: ' . $complaint['status'],
-                'pengguna_id' => $masyarakatId,
+                'pengguna_id' => $penggunaId,
                 'tanggal_dibuat' => now()->subDays(rand(0, 5)),
                 'tanggal_diubah' => now()->subDays(rand(0, 5)),
             ]);

@@ -20,6 +20,10 @@ Route::middleware('guest')->group(function () {
 // Logout route - Authenticated only
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+// Complaint detail - Accessible by everyone (with access control in controller)
+Route::get('/aduan/{id}', [AduanController::class, 'show'])->name('aduan.show');
+Route::post('/aduan/{id}/vote', [AduanController::class, 'vote'])->name('aduan.vote');
+
 // Aduan routes - Authenticated users only
 Route::middleware(\App\Http\Middleware\CheckAuth::class)->group(function () {
     Route::get('/aduan/create', [AduanController::class, 'create'])->name('aduan.create');
