@@ -180,7 +180,6 @@
 
 <script setup>
 import { useForm, Link } from '@inertiajs/vue3';
-import Swal from 'sweetalert2';
 
 const form = useForm({
   nik: '',
@@ -196,24 +195,13 @@ const form = useForm({
 const submit = () => {
   form.post('/register/masyarakat', {
     preserveScroll: true,
-    onSuccess: (response) => {
-      Swal.fire({
-        icon: 'success',
-        title: 'Registrasi Berhasil!',
-        text: 'Akun Anda telah berhasil dibuat. Silakan login untuk melanjutkan.',
-        confirmButtonText: 'Login Sekarang',
-        confirmButtonColor: '#3B82F6',
-        allowOutsideClick: false,
-      }).then((result) => {
-        if (result.isConfirmed) {
-          window.location.href = '/login';
-        }
-      });
-    },
     onError: () => {
       form.password = '';
       form.password_confirmation = '';
     },
+    onFinish: () => {
+      form.processing = false;
+    }
   });
 };
 </script>

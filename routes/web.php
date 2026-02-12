@@ -39,6 +39,10 @@ Route::middleware('guest')->group(function () {
         ]);
     })->name('register.opd');
     Route::post('/register/opd', [AuthController::class, 'registerOPD'])->name('register.opd.post');
+
+    // Email Verification Routes
+    Route::get('/verify-email/notice', [AuthController::class, 'verifyEmailNotice'])->name('verification.notice');
+    Route::get('/verify-email/{token}', [AuthController::class, 'verifyEmail'])->name('verification.verify');
 });
 
 // Logout route - Authenticated only

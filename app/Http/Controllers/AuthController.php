@@ -60,6 +60,13 @@ class AuthController extends Controller
             ])->onlyInput('email');
         }
 
+        // Cek status verifikasi email
+        if (!$pengguna->status_verifikasi) {
+            return back()->withErrors([
+                'email' => 'Email belum diverifikasi. Silakan cek inbox Anda.',
+            ])->onlyInput('email');
+        }
+
         // Simpan session login
         session([
             'pengguna_id' => $pengguna->id,
@@ -177,14 +184,16 @@ class AuthController extends Controller
             DB::beginTransaction();
 
             // 1. Simpan ke tabel pengguna
+            $token = \Illuminate\Support\Str::random(64);
+
             $penggunaId = DB::table('pengguna')->insertGetId([
                 'nama_pengguna' => $request->nama_lengkap,
                 'email' => $request->email,
                 'password_hash' => Hash::make($request->password),
                 'status_verifikasi' => false,
                 'email_verifikasi' => null,
-                'token_verifikasi' => null,
-                'status_aktif' => true,
+                'token_verifikasi' => $token,
+                'status_aktif' => true, // Masih aktif tapi belum verifikasi email
                 'tanggal_dibuat' => now(),
                 'tanggal_diubah' => now(),
             ]);
@@ -212,7 +221,13 @@ class AuthController extends Controller
 
             DB::commit();
 
-            return redirect()->route('login')->with('success', 'Registrasi berhasil! Silakan login');
+            // Kirim email verifikasi
+            $pengguna = \App\Models\Pengguna::find($penggunaId);
+            if ($pengguna) {
+                \Illuminate\Support\Facades\Mail::to($pengguna->email)->send(new \App\Mail\VerifyEmail($pengguna));
+            }
+
+            return redirect()->route('verification.notice')->with('success', 'Registrasi berhasil! Silakan cek email Anda untuk verifikasi akun.');
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -220,6 +235,37 @@ class AuthController extends Controller
                 'error' => 'Terjadi kesalahan: ' . $e->getMessage(),
             ])->withInput();
         }
+    }
+
+    /**
+     * Tampilkan halaman notifikasi verifikasi email
+     */
+    public function verifyEmailNotice()
+    {
+        return Inertia::render('Auth/VerifyEmailNotice');
+    }
+
+    /**
+     * Proses verifikasi email
+     */
+    public function verifyEmail($token)
+    {
+        $pengguna = \App\Models\Pengguna::where('token_verifikasi', $token)->first();
+
+        if (!$pengguna) {
+            return redirect()->route('login')->withErrors(['email' => 'Token verifikasi tidak valid.']);
+        }
+
+        if ($pengguna->status_verifikasi) {
+            return redirect()->route('login')->with('success', 'Email sudah terverifikasi. Silakan login.');
+        }
+
+        $pengguna->status_verifikasi = true;
+        $pengguna->email_verifikasi = now();
+        $pengguna->token_verifikasi = null; // Hapus token setelah verifikasi
+        $pengguna->save();
+
+        return redirect()->route('login')->with('success', 'Email berhasil diverifikasi! Silakan login.');
     }
 
     /**
