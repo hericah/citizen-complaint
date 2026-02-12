@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,        // Buat role: Admin, OPD, Masyarakat
             MasterDataSeeder::class,  // Buat status aduan, akses aduan, & kategori aduan
             AdminOpdSeeder::class,    // Buat user Admin, OPD, dan assign kategori ke OPD
+            AduanSeeder::class,       // Buat sample data aduan
         ]);
     }
 }

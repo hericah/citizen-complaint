@@ -22,7 +22,10 @@ class MasterDataSeeder extends Seeder
         ];
 
         foreach ($statusAduan as $status) {
-            DB::table('status_aduan')->insert($status);
+            DB::table('status_aduan')->updateOrInsert(
+                ['nama_status' => $status['nama_status']],
+                $status
+            );
         }
 
         // 2. Akses Aduan
@@ -38,7 +41,10 @@ class MasterDataSeeder extends Seeder
         ];
 
         foreach ($aksesAduan as $akses) {
-            DB::table('akses_aduan')->insert($akses);
+            DB::table('akses_aduan')->updateOrInsert(
+                ['nama_akses_aduan' => $akses['nama_akses_aduan']],
+                $akses
+            );
         }
 
         // 3. Kategori Aduan
@@ -90,7 +96,10 @@ class MasterDataSeeder extends Seeder
         ];
 
         foreach ($kategoriAduan as $kategori) {
-            DB::table('kategori_aduan')->insert($kategori);
+            DB::table('kategori_aduan')->updateOrInsert(
+                ['nama_kategori' => $kategori['nama_kategori']],
+                $kategori
+            );
         }
 
         $this->command->info('✅ Master data berhasil dibuat:');

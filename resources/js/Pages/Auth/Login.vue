@@ -98,6 +98,16 @@
           </Link>
         </p>
       </div>
+
+      <!-- Back to Homepage Link -->
+      <div class="text-center pt-1 border-t">
+        <Link href="/" class="flex items-center justify-center space-x-1 text-gray-500 hover:text-blue-600 transition text-sm pt-3">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span>Kembali ke Beranda</span>
+        </Link>
+      </div>
     </div>
   </div>
 </template>

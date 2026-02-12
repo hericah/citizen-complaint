@@ -1,5 +1,5 @@
 <script setup>
-import { Head } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
 import StaffLayout from '@/Layouts/StaffLayout.vue'
 
 defineProps({
@@ -160,9 +160,9 @@ const getStatusColor = (status) => {
                 {{ complaint.tanggal }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <button class="text-blue-600 hover:text-blue-800 font-medium transition">
+                <Link :href="`/aduan/${complaint.id}`" class="text-blue-600 hover:text-blue-800 font-medium transition">
                   Detail
-                </button>
+                </Link>
               </td>
             </tr>
           </tbody>

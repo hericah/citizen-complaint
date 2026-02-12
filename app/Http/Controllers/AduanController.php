@@ -76,6 +76,9 @@ class AduanController extends Controller
                 ])->withInput();
             }
 
+            // Upload foto to S3/MinIO
+            $fotoPath = $request->file('foto')->store('aduan');
+
             // Generate no_aduan (format: ADU-YYYYMMDD-XXXX)
             $today = now()->format('Ymd');
             $latestAduan = DB::table('aduan')
@@ -105,7 +108,7 @@ class AduanController extends Controller
             $fotoPath = 'upload_aduan/' . $noAduan . '/' . $filename;
 
             // Insert into aduan table
-            DB::table('aduan')->insert([
+            $aduanId = DB::table('aduan')->insertGetId([
                 'no_aduan' => $noAduan,
                 'tanggal_lapor' => now(),
                 'isi_aduan' => $validated['deskripsi'],
@@ -122,6 +125,17 @@ class AduanController extends Controller
                 'tanggal_diubah' => now(),
             ]);
 
+            // Create initial status history
+            DB::table('riwayat_status_aduan')->insert([
+                'aduan_id' => $aduanId,
+                'status_aduan_id' => 1, // Diajukan
+                'waktu_status_aduan' => now(),
+                'catatan' => 'Aduan berhasil diajukan',
+                'pengguna_id' => $penggunaId,
+                'tanggal_dibuat' => now(),
+                'tanggal_diubah' => now(),
+            ]);
+
             DB::commit();
 
             // Redirect back to home with success message
@@ -129,9 +143,9 @@ class AduanController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            // If upload fails, delete the uploaded file (from public folder)
-            if (isset($fotoPath) && File::exists(public_path($fotoPath))) {
-                File::delete(public_path($fotoPath));
+            // If upload fails, delete the uploaded file
+            if (isset($fotoPath)) {
+                Storage::delete($fotoPath);
             }
 
             // Log error for debugging
@@ -140,6 +154,140 @@ class AduanController extends Controller
             return back()->withErrors([
                 'error' => 'Terjadi kesalahan saat menyimpan aduan. Silakan coba lagi.'
             ])->withInput();
+        }
+    }
+
+    /**
+     * Display the specified complaint
+     */
+    public function show($id)
+    {
+        // Get authenticated user ID from session (null if guest)
+        $penggunaId = session('pengguna_id');
+
+        // Get complaint with all related data
+        $aduan = DB::table('aduan')
+            ->join('status_aduan', 'aduan.status_aduan_id', '=', 'status_aduan.id')
+            ->join('kategori_aduan', 'aduan.kategori_aduan_id', '=', 'kategori_aduan.id')
+            ->join('akses_aduan', 'aduan.akses_aduan_id', '=', 'akses_aduan.id')
+            ->join('masyarakat', 'aduan.masyarakat_id', '=', 'masyarakat.id')
+            ->join('pengguna', 'masyarakat.pengguna_id', '=', 'pengguna.id')
+            ->where('aduan.id', $id)
+            ->select(
+                'aduan.*',
+                'status_aduan.nama_status as status',
+                'kategori_aduan.nama_kategori as kategori',
+                'akses_aduan.nama_akses_aduan as akses',
+                'pengguna.nama_pengguna as pelapor',
+                'masyarakat.pengguna_id as pelapor_pengguna_id'
+            )
+            ->first();
+
+        // Check if complaint exists
+        if (!$aduan) {
+            abort(404, 'Aduan tidak ditemukan');
+        }
+
+        // Access control
+        $isGuest = !$penggunaId;
+        $isOwner = $penggunaId && $aduan->pelapor_pengguna_id == $penggunaId;
+        $isPublic = $aduan->akses === 'Publik';
+
+        // Get user role if authenticated
+        $userRole = null;
+        if ($penggunaId) {
+            $userRole = DB::table('peran_pengguna')
+                ->join('peran', 'peran_pengguna.peran_id', '=', 'peran.id')
+                ->where('peran_pengguna.pengguna_id', $penggunaId)
+                ->value('peran.nama_peran');
+        }
+
+        $isAdminOrOpd = in_array($userRole, ['Admin', 'OPD']);
+
+        // Check access permission
+        if ($isGuest && !$isPublic) {
+            // Guest can only view public complaints
+            abort(403, 'Anda tidak memiliki akses ke aduan ini');
+        }
+
+        if (!$isGuest && !$isOwner && !$isPublic && !$isAdminOrOpd) {
+            // Authenticated user can only view their own private complaints or public complaints
+            // Admin and OPD can view all
+            abort(403, 'Anda tidak memiliki akses ke aduan ini');
+        }
+
+        // Get status history
+        $riwayatStatus = DB::table('riwayat_status_aduan')
+            ->join('status_aduan', 'riwayat_status_aduan.status_aduan_id', '=', 'status_aduan.id')
+            ->join('pengguna', 'riwayat_status_aduan.pengguna_id', '=', 'pengguna.id')
+            ->where('riwayat_status_aduan.aduan_id', $id)
+            ->select(
+                'riwayat_status_aduan.*',
+                'status_aduan.nama_status as status',
+                'pengguna.nama_pengguna as petugas'
+            )
+            ->orderBy('riwayat_status_aduan.waktu_status_aduan', 'desc')
+            ->get();
+
+        // Get responses from OPD
+        $tanggapan = DB::table('tanggapan_aduan')
+            ->join('pengguna', 'tanggapan_aduan.pengguna_id', '=', 'pengguna.id')
+            ->where('tanggapan_aduan.aduan_id', $id)
+            ->select(
+                'tanggapan_aduan.*',
+                'pengguna.nama_pengguna as petugas'
+            )
+            ->orderBy('tanggapan_aduan.tanggal_dibuat', 'desc')
+            ->get();
+
+        // Generate image URL
+        if ($aduan->foto) {
+            $disk = config('filesystems.default');
+            if ($disk === 's3') {
+                $aduan->foto_url = Storage::url($aduan->foto);
+            } else {
+                $aduan->foto_url = asset('storage/' . $aduan->foto);
+            }
+        } else {
+            $aduan->foto_url = null;
+        }
+
+        return Inertia::render('AduanDetail', [
+            'aduan' => $aduan,
+            'riwayatStatus' => $riwayatStatus,
+            'tanggapan' => $tanggapan,
+            'isOwner' => $isOwner,
+            'isGuest' => $isGuest,
+        ]);
+    }
+
+    /**
+     * Vote for a complaint
+     */
+    public function vote($id)
+    {
+        try {
+            // Check if complaint exists
+            $aduan = DB::table('aduan')->where('id', $id)->first();
+
+            if (!$aduan) {
+                return response()->json(['error' => 'Aduan tidak ditemukan'], 404);
+            }
+
+            // Increment vote count
+            DB::table('aduan')
+                ->where('id', $id)
+                ->increment('jumlah_vote');
+
+            // Get updated vote count
+            $newVoteCount = DB::table('aduan')->where('id', $id)->value('jumlah_vote');
+
+            return response()->json([
+                'success' => true,
+                'jumlah_vote' => $newVoteCount
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Terjadi kesalahan'], 500);
         }
     }
 }
