@@ -14,12 +14,39 @@ const props = defineProps({
 const imageList = computed(() =>
   props.fotos.length > 0 ? props.fotos : props.aduan.foto_url ? [props.aduan.foto_url] : []
 )
-const activeImage = ref(imageList.value[0])
 
+// Slider state
+const activeIndex = ref(0)
+const isModalOpen = ref(false)
+
+const nextSlide = () => {
+  if (imageList.value.length > 1) {
+    activeIndex.value = (activeIndex.value + 1) % imageList.value.length
+  }
+}
+
+const prevSlide = () => {
+  if (imageList.value.length > 1) {
+    activeIndex.value = (activeIndex.value - 1 + imageList.value.length) % imageList.value.length
+  }
+}
+
+const openModal = index => {
+  activeIndex.value = index
+  isModalOpen.value = true
+  document.body.style.overflow = 'hidden' // Prevent background scrolling
+}
+
+const closeModal = () => {
+  isModalOpen.value = false
+  document.body.style.overflow = 'auto'
+}
+
+// Watch for aduan changes to reset slider
 watch(
   () => props.aduan,
   () => {
-    activeImage.value = imageList.value[0]
+    activeIndex.value = 0
   }
 )
 
@@ -119,29 +146,67 @@ const getStatusColor = status => {
           <!-- Complaint Card -->
           <div class="bg-white rounded-xl shadow-md overflow-hidden">
             <!-- Image -->
-            <div v-if="imageList.length > 0" class="relative bg-gray-200">
-              <div class="h-64 sm:h-96">
-                <img :src="activeImage" :alt="aduan.no_aduan" class="w-full h-full object-cover" />
-              </div>
-
-              <!-- Thumbnails -->
-              <div
-                v-if="imageList.length > 1"
-                class="flex gap-2 p-2 overflow-x-auto bg-white/10 backdrop-blur-sm absolute bottom-0 w-full"
-              >
-                <button
-                  v-for="(img, idx) in imageList"
-                  :key="idx"
-                  @click="activeImage = img"
-                  :class="[
-                    'flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border-2 transition',
-                    activeImage === img
-                      ? 'border-blue-500 ring-2 ring-blue-300'
-                      : 'border-white opacity-70 hover:opacity-100',
-                  ]"
+            <!-- Image Slider -->
+            <div v-if="imageList.length > 0" class="relative bg-gray-900 group">
+              <div class="h-64 sm:h-96 w-full relative overflow-hidden">
+                <!-- Main Image -->
+                <div
+                  class="w-full h-full flex transition-transform duration-500 ease-out"
+                  :style="{ transform: `translateX(-${activeIndex * 100}%)` }"
                 >
-                  <img :src="img" class="w-full h-full object-cover" />
+                  <img
+                    v-for="(img, idx) in imageList"
+                    :key="idx"
+                    :src="img"
+                    :alt="`Foto ${idx + 1}`"
+                    class="w-full h-full object-contain flex-shrink-0 cursor-zoom-in"
+                    @click="openModal(idx)"
+                  />
+                </div>
+
+                <!-- Navigation Arrows (only if > 1 image) -->
+                <button
+                  v-if="imageList.length > 1"
+                  @click.stop="prevSlide"
+                  class="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
                 </button>
+                <button
+                  v-if="imageList.length > 1"
+                  @click.stop="nextSlide"
+                  class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+
+                <!-- Dots Indicator -->
+                <div
+                  v-if="imageList.length > 1"
+                  class="absolute bottom-4 left-0 right-0 flex justify-center space-x-2"
+                >
+                  <button
+                    v-for="(_, idx) in imageList"
+                    :key="idx"
+                    @click="activeIndex = idx"
+                    class="w-2 h-2 rounded-full transition-all"
+                    :class="activeIndex === idx ? 'bg-white w-6' : 'bg-white/50 hover:bg-white/80'"
+                  ></button>
+                </div>
               </div>
             </div>
 
@@ -334,6 +399,82 @@ const getStatusColor = status => {
         </div>
       </div>
     </main>
+
+    <!-- Fullscreen Modal -->
+    <Teleport to="body">
+      <div
+        v-if="isModalOpen"
+        class="fixed inset-0 z-[60] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300"
+        @click.self="closeModal"
+      >
+        <!-- Close Button -->
+        <button
+          @click="closeModal"
+          class="absolute top-6 right-6 text-white/70 hover:text-white transition-colors"
+        >
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+
+        <!-- Modal Content -->
+        <div class="relative w-full max-w-7xl max-h-full flex flex-col items-center">
+          <div class="w-full h-[80vh] flex items-center justify-center">
+            <img
+              :src="imageList[activeIndex]"
+              class="max-w-full max-h-full object-contain shadow-2xl rounded-lg"
+            />
+          </div>
+
+          <!-- Navigation -->
+          <div class="absolute inset-y-0 left-0 flex items-center">
+            <button
+              v-if="imageList.length > 1"
+              @click.stop="prevSlide"
+              class="bg-black/50 hover:bg-black/70 text-white p-3 rounded-full backdrop-blur-sm transition-all -ml-2 sm:ml-4"
+            >
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <div class="absolute inset-y-0 right-0 flex items-center">
+            <button
+              v-if="imageList.length > 1"
+              @click.stop="nextSlide"
+              class="bg-black/50 hover:bg-black/70 text-white p-3 rounded-full backdrop-blur-sm transition-all -mr-2 sm:mr-4"
+            >
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Caption/Counter -->
+          <div
+            class="mt-4 text-white/80 font-medium text-lg tracking-wide bg-black/40 px-4 py-2 rounded-full backdrop-blur-md"
+          >
+            {{ activeIndex + 1 }} / {{ imageList.length }}
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 

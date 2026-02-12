@@ -80,7 +80,8 @@ class HomeController extends Controller
                 DB::raw('LEFT(aduan.isi_aduan, 100) as title'),
                 'aduan.lokasi as location',
                 'status_aduan.nama_status as status',
-                'aduan.foto'
+                'aduan.foto',
+                DB::raw('(SELECT COUNT(*) FROM aduan_fotos WHERE aduan_fotos.aduan_id = aduan.id) as photos_count')
             )
             ->orderBy('aduan.tanggal_dibuat', 'desc')
             ->limit(20)
@@ -94,11 +95,23 @@ class HomeController extends Controller
                         $report->image = Storage::url($report->foto);
                     } else {
                         // For public disk, use asset URL
-                        $report->image = asset('storage/' . $report->foto);
+                        $report->image = asset($report->foto);
                     }
                 } else {
                     $report->image = null;
                 }
+
+                // Adjust photo count strategy:
+                // If aduan.foto exists, count is 1 + photos_count (from additional table)
+                // However, our current logic stores ALL photos in aduan_fotos too.
+                // So if photos_count > 0, we use that. If 0 but aduan.foto exists, it's 1.
+                // But wait, the previous logic says we store ALL in aduan_fotos.
+                // So photos_count should be accurate for total.
+                // If photos_count is 0 but aduan.foto is set (legacy), then count is 1.
+                if ($report->photos_count == 0 && $report->foto) {
+                    $report->photos_count = 1;
+                }
+
                 unset($report->foto);
                 return $report;
             });
