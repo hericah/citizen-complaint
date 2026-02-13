@@ -29,7 +29,21 @@ cd citizen-complaint
 ### 3. Setup Production Environment (`.env`)
 Create a `.env` file on your VPS using the template below. Replace the values with your actual production credentials:
 
+> [!IMPORTANT]
+> If you are running multiple servers, the **`APP_KEY` must be identical** on all servers to ensure sessions and encryption work correctly.
+>
+> **Generate a new key using Docker:**
+> ```bash
+> docker run --rm php:8.2-cli php -r "echo 'base64:'.base64_encode(random_bytes(32)).PHP_EOL;"
+> ```
+
 ```env
+APP_NAME="Citizen Complaint"
+APP_ENV=production
+APP_KEY=base64:PASTE_YOUR_GENERATED_KEY_HERE
+APP_DEBUG=false
+APP_URL=https://complaint.yourdomain.com
+
 # Database
 DB_CONNECTION=mysql
 DB_HOST=your_db_host
@@ -74,22 +88,11 @@ docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-### 5. Setup External Nginx Load Balancer
-Install Nginx and Certbot on your VPS host:
-
-```bash
-sudo apt update
-sudo apt install nginx certbot python3-certbot-nginx -y
-```
-
-#### Obtain SSL Certificate
-Run Certbot to obtain your certificates:
-```bash
-sudo certbot --nginx -d complaint.yourdomain.com
-```
+### 5. Configure External Nginx Load Balancer
+Configure your external Nginx as a reverse proxy.
 
 #### External Nginx Configuration Example
-After obtaining the certificates, ensure your file at `/etc/nginx/sites-available/citizen-complaint` looks like this:
+Below is an example configuration for `/etc/nginx/sites-available/citizen-complaint`:
 
 ```nginx
 upstream citizen_complaint_app {
@@ -136,13 +139,6 @@ sudo nginx -t
 sudo systemctl restart nginx
 ```
 
-#### SSL Auto-Renewal
-Certbot automatically sets up a systemd timer or cron job to renew your certificates. You can verify it by running:
-```bash
-sudo certbot renew --dry-run
-```
-If this command succeeds, your certificates will renew automatically before they expire.
-
 ### 6. Run Database Migrations
 Before running migrations, ensure your database exists. Run this command (it will automatically use the values from your `.env` file):
 
@@ -166,6 +162,26 @@ docker exec -it citizen-complaint-app php -r "
 "
 ```
 
+### 7. Initialize Application (CRITICAL)
+If you see a **500 Error**, it is likely because the Application Key is missing or the configuration is cached with wrong paths.
+
+> [!WARNING]
+> Only run `key:generate` on the **first server**. For other servers, manually copy the `APP_KEY` from the first server's `.env` to ensure consistency.
+
+```bash
+# 1. Generate Application Key (Only on the FIRST server setup)
+docker exec -it citizen-complaint-app php artisan key:generate
+
+# 2. Clear all potentially stale caches
+docker exec -it citizen-complaint-app php artisan config:clear
+docker exec -it citizen-complaint-app php artisan view:clear
+docker exec -it citizen-complaint-app php artisan cache:clear
+
+# 3. Create storage link
+docker exec -it citizen-complaint-app php artisan storage:link
+```
+
+### 8. Run Database Migrations
 Now, execute the migrations:
 ```bash
 docker exec -it citizen-complaint-app php artisan migrate --force
