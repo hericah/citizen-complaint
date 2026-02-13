@@ -139,7 +139,10 @@ COPY . .
 RUN composer dump-autoload --optimize
 
 # Set permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+RUN mkdir -p /var/www/html/storage/framework/views \
+             /var/www/html/storage/framework/cache \
+             /var/www/html/storage/framework/sessions \
+    && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Copy supervisor configuration for production
