@@ -5,7 +5,11 @@ This guide explains how to manually deploy the application to your VPS after the
 ## Prerequisites
 
 1.  **VPS** with Docker and Docker Compose installed.
-2.  **Docker Hub Credentials** stored in GitHub Secrets (`DOCKER_USERNAME`, `DOCKER_PASSWORD`).
+2.  **Docker Hub Credentials** stored in GitHub Secrets:
+    - Go to your repo on GitHub: **Settings > Secrets and variables > Actions**.
+    - Click **New repository secret**.
+    - Add `DOCKER_USERNAME` (your Docker Hub username).
+    - Add `DOCKER_PASSWORD` (your Docker Hub personal access token or password).
 3.  **Environment Variables**: A `.env.prod` file on your VPS with production values.
 
 ## Deployment Steps
