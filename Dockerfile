@@ -83,7 +83,7 @@ FROM base AS frontend-builder
 COPY package*.json ./
 
 # Install Node.js dependencies
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy application files
 COPY . .
@@ -107,7 +107,7 @@ COPY . .
 RUN composer install --prefer-dist
 
 # Install Node.js dependencies
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Set permissions for storage, bootstrap cache, and node_modules
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/node_modules
