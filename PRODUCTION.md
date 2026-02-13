@@ -42,7 +42,8 @@ APP_NAME="Citizen Complaint"
 APP_ENV=production
 APP_KEY=base64:PASTE_YOUR_GENERATED_KEY_HERE
 APP_DEBUG=false
-APP_URL=https://complaint.yourdomain.com
+APP_URL=http://123.123.123.123 # Ganti dengan IP VPS Anda
+ASSET_URL=http://123.123.123.123 # Wajib sama dengan APP_URL
 
 # Database
 DB_CONNECTION=mysql
@@ -160,7 +161,6 @@ docker exec -it citizen-complaint-app php -r "
         die(\"DB Error: \" . \$e->getMessage() . \"\\n\");
     }
 "
-```
 
 ### 7. Initialize Application (CRITICAL)
 If you see a **500 Error**, it is likely because the Application Key is missing or the configuration is cached with wrong paths.
